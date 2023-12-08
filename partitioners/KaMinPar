@@ -3,6 +3,4 @@
 . "$script_pwd/../partitioners/inc/git.sh"
 . "$script_pwd/../partitioners/inc/kagen-partitioner.sh"
 
-KAMINPAR_PRIVATE_REPOSITORY_URL="https://github.com/dsalwasser/KaMinPar.git"
-
 . "$script_pwd/../partitioners/inc/kaminpar.sh"
