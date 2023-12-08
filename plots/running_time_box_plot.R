@@ -66,7 +66,7 @@ create_running_time_boxplot <- function(...,
   min_max_time <- pp_data %>%
     dplyr::filter(!Timeout & !Infeasible & !Failed) %>%
     dplyr::summarize(Max = max(Time), Min = min(Time))
-  max_time_log10 <- ceiling(log10(min_max_time$Max))
+  max_time_log10 <- ifelse(min_max_time$Max < 10, 1, ceiling(log10(min_max_time$Max)))
   min_time_log10 <- 0 # floor(log10(min_max_time$Min))
   max_time_exp10 <- 10^max_time_log10
   min_time_exp10 <- 10^min_time_log10
