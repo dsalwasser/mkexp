@@ -13,6 +13,10 @@ source(file.path(script.basename, "../plots/memory_usage_box_plot.R"), chdir = T
 
 graphs_db <- read.csv(file.path(script.basename, "../data/graphs.csv"), header = TRUE, sep = ",") |> dplyr::distinct()
 
+if (!dir.exists("plots")) {
+    dir.create("plots")
+}
+
 # CLI arguments == algorithms to look at
 generate_all_cut <- FALSE
 generate_per_instance <- FALSE
@@ -146,7 +150,7 @@ if (!generate_per_instance_fm_batches && !generate_fm_batches) {
 
 # Performance profile containing all algorithms
 if (generate_all_cut) {
-    pdf("all_cut.pdf")
+    pdf("plots/all_cut.pdf")
     all_pp <- do.call(create_performance_profile, data) +
         theme_bw() +
         create_theme() +
@@ -157,7 +161,7 @@ if (generate_all_cut) {
 
 # Pairwise performance profiles
 if (generate_pairwise_cut) {
-    pdf("pairwise_cut.pdf")
+    pdf("plots/pairwise_cut.pdf")
     algorithm_indices <- 1:(length(algorithms) - 1)
     for (i in 1:(length(algorithms) - 1)) {
         for (j in (i + 1):length(algorithms)) {
@@ -173,7 +177,7 @@ if (generate_pairwise_cut) {
 
 # Running time boxplots
 if (generate_all_time) {
-    pdf("all_time.pdf")
+    pdf("plots/all_time.pdf")
     args <- data
     args[["annotation"]] <- gmean_running_times
     all_bp <- do.call(create_running_time_boxplot, args) + theme_bw() + create_theme()
@@ -182,7 +186,7 @@ if (generate_all_time) {
 }
 
 if (generate_per_k_time) {
-    pdf("per_k_time.pdf")
+    pdf("plots/per_k_time.pdf")
     ks <- unique(data[[1]]$K)
     for (k in ks) {
         fargs <- lapply(data, function(df) {
@@ -198,7 +202,7 @@ if (generate_per_k_time) {
 
 # Memory usage boxplots
 if (generate_all_memory) {
-    pdf("memory_usage.pdf")
+    pdf("plots/memory_usage.pdf")
     args <- data
     args[["annotation"]] <- gmean_memory_usage
     all_bp <- do.call(create_memory_usage_boxplot, args) +
@@ -209,7 +213,7 @@ if (generate_all_memory) {
 }
 
 if (generate_per_k_memory) {
-    pdf("per_k_memory_usage.pdf")
+    pdf("plots/per_k_memory_usage.pdf")
     ks <- unique(data[[1]]$K)
     for (k in ks) {
         fargs <- lapply(data, function(df) {
@@ -245,7 +249,7 @@ if (generate_per_instance) {
         dplyr::mutate(MaxDegToM = MaxDeg / M.y)
     normalized_data$Title <- factor(normalized_data$Title, levels = unique(normalized_data$Title[order(normalized_data$MaxDeg, decreasing = TRUE)]))
 
-    pdf("per_instance.pdf", width = side_len * 4, height = side_len * 3)
+    pdf("plots/per_instance.pdf", width = side_len * 4, height = side_len * 3)
 
     # Cuts
     p <- ggplot(normalized_data, aes(x = K, y = RelAvgCut, fill = Algorithm)) +
@@ -300,7 +304,7 @@ if (generate_per_instance) {
 
 if (generate_per_instance_fm_batches) {
     side_len <- round(sqrt(length(unique(all_data$Graph))))
-    pdf("per_instance_fm_batches.pdf", width = side_len * 4, height = side_len * 3)
+    pdf("plots/per_instance_fm_batches.pdf", width = side_len * 4, height = side_len * 3)
 
     df$Distance <- factor(df$Distance)
     for (phase in c("All", "Coarsest", "Finest")) {
@@ -335,7 +339,7 @@ if (generate_per_instance_fm_batches) {
 }
 
 if (generate_fm_batches) {
-    pdf("fm_batches.pdf", width = 7)
+    pdf("plots/fm_batches.pdf", width = 7)
 
     cutoff_distance <- 16
     num_graphs <- length(unique(all_data$Graph))
@@ -378,7 +382,7 @@ if (generate_fm_batches) {
 }
 
 if (generate_ss) {
-    pdf("ss.pdf", width = 14, height = 3)
+    pdf("plots/ss.pdf", width = 14, height = 3)
     p <- ggplot(all_data, aes(x = NumPEs, y = AvgTime)) +
         ggtitle("Strong scaling") +
         geom_line() +
