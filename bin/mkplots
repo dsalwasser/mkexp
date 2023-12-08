@@ -9,6 +9,7 @@ script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initia
 script.basename <- dirname(script.name)
 source(file.path(script.basename, "../plots/performance_profile_plot.R"), chdir = TRUE)
 source(file.path(script.basename, "../plots/running_time_box_plot.R"), chdir = TRUE)
+source(file.path(script.basename, "../plots/memory_usage_box_plot.R"), chdir = TRUE)
 
 graphs_db <- read.csv(file.path(script.basename, "../data/graphs.csv"), header = TRUE, sep = ",") |> dplyr::distinct()
 
@@ -17,6 +18,8 @@ generate_all_cut <- FALSE
 generate_per_instance <- FALSE
 generate_all_time <- FALSE
 generate_per_k_time <- FALSE
+generate_all_memory <- FALSE
+generate_per_k_memory <- FALSE
 generate_pairwise_cut <- FALSE
 generate_per_instance_fm_batches <- FALSE
 generate_fm_batches <- FALSE
@@ -40,12 +43,16 @@ if (length(algorithms) > 0) {
         generate_pairwise_cut <- TRUE
     } else if (mode == "--all-time") {
         generate_all_time <- TRUE
+    } else if (mode == "--all-memory") {
+        generate_all_memory <- TRUE
     } else if (mode == "--per-instance-fm-batches") {
         generate_per_instance_fm_batches <- TRUE
     } else if (mode == "--fm-batches") {
         generate_fm_batches <- TRUE
     } else if (mode == "--per-k-time") {
         generate_per_k_time <- TRUE
+    } else if (mode == "--per-k-memory") {
+        generate_per_k_memory <- TRUE
     } else if (mode == "--ss") {
         generate_ss <- TRUE
     } else {
@@ -55,38 +62,47 @@ if (length(algorithms) > 0) {
     if (picked_plot) {
         algorithms <- algorithms[-1]
     }
-} 
+}
 
 if (!picked_plot) {
     generate_all_cut <- TRUE
     generate_per_instance <- TRUE
     generate_all_time <- TRUE
+    generate_all_memory <- TRUE
     generate_pairwise_cut <- TRUE
 }
 
 # Load result file for each algorithm
 data <- list()
 gmean_running_times <- data.frame(Algorithm = factor(), Time = numeric())
+gmean_memory_usage <- data.frame(Algorithm = factor(), Memory = numeric())
 
 for (algorithm in algorithms) {
-  df <- load_data(algorithm, paste0(getwd(), "/results/", algorithm, ".csv"))
-  df <- df %>%
-    dplyr::mutate(Algorithm = paste0(Algorithm, "-", NumThreadsPerMPI))
+    df <- load_data(algorithm, paste0(getwd(), "/results/", algorithm, ".csv"))
+    df <- df %>%
+        dplyr::mutate(Algorithm = paste0(Algorithm, "-", NumThreadsPerMPI))
 
-  df <- merge(df, graphs_db, by = "Graph", all.x = TRUE)
+    df <- merge(df, graphs_db, by = "Graph", all.x = TRUE)
 
-  thread_configs <- unique(df$NumThreadsPerMPI)
-  for (thread_config in thread_configs) {
-    subdf <- df %>%
-      dplyr::filter(NumThreadsPerMPI == thread_config) 
+    thread_configs <- unique(df$NumThreadsPerMPI)
+    for (thread_config in thread_configs) {
+        subdf <- df %>%
+            dplyr::filter(NumThreadsPerMPI == thread_config)
 
-    gmean_running_times <- gmean_running_times |>
-      rbind(data.frame(
-        Algorithm = factor(paste0(algorithm, "-", thread_config)),
-        Time = mean(subdf$AvgTime)
-      ))
-    data <- append(data, list(subdf))
-  }
+        gmean_running_times <- gmean_running_times |>
+            rbind(data.frame(
+                Algorithm = factor(paste0(algorithm, "-", thread_config)),
+                Time = mean(subdf$AvgTime)
+            ))
+
+        gmean_memory_usage <- gmean_memory_usage |>
+            rbind(data.frame(
+                Algorithm = factor(paste0(algorithm, "-", thread_config)),
+                Memory = mean(subdf$AvgMemory)
+            ))
+
+        data <- append(data, list(subdf))
+    }
 }
 
 ks <- unique(data[[1]]$K)
@@ -95,12 +111,12 @@ num_unique_graphs <- length(unique(data[[1]]$Graph))
 
 if (!generate_per_instance_fm_batches && !generate_fm_batches) {
     for (i in 1:length(data)) {
-        n_before <- nrow(data[[i]]) 
-        data[[i]] <- data[[i]] %>% 
+        n_before <- nrow(data[[i]])
+        data[[i]] <- data[[i]] %>%
             dplyr::filter(K %in% ks) %>%
             dplyr::filter(Graph %in% graphs) %>%
             dplyr::arrange(Graph, K)
-        n_after <- nrow(data[[i]]) 
+        n_after <- nrow(data[[i]])
         cat(paste0("Removed ", n_before - n_after, " rows from ", algorithms[i], "\n"))
     }
 
@@ -173,7 +189,36 @@ if (generate_per_k_time) {
             df %>% dplyr::filter(K == k)
         })
 
-        all_bp <- do.call(create_running_time_boxplot, fargs) + theme_bw() + create_theme() + 
+        all_bp <- do.call(create_running_time_boxplot, fargs) + theme_bw() + create_theme() +
+            ggtitle(paste0("k=", k))
+        print(all_bp)
+    }
+    dev.off()
+}
+
+# Memory usage boxplots
+if (generate_all_memory) {
+    pdf("memory_usage.pdf")
+    args <- data
+    args[["annotation"]] <- gmean_memory_usage
+    all_bp <- do.call(create_memory_usage_boxplot, args) +
+        theme_bw() +
+        create_theme()
+    print(all_bp)
+    dev.off()
+}
+
+if (generate_per_k_memory) {
+    pdf("per_k_memory_usage.pdf")
+    ks <- unique(data[[1]]$K)
+    for (k in ks) {
+        fargs <- lapply(data, function(df) {
+            df %>% dplyr::filter(K == k)
+        })
+
+        all_bp <- do.call(create_memory_usage_boxplot, fargs) +
+            theme_bw() +
+            create_theme() +
             ggtitle(paste0("k=", k))
         print(all_bp)
     }
@@ -184,9 +229,10 @@ if (generate_per_k_time) {
 all_data <- data.frame()
 first <- data[[1]]
 for (df in data) {
-  df$RelAvgTime <- df$AvgTime / first$AvgTime
-  df$RelAvgCut <- df$AvgCut / first$AvgCut
-  all_data <- rbind(all_data, df)
+    df$RelAvgCut <- df$AvgCut / first$AvgCut
+    df$RelAvgTime <- df$AvgTime / first$AvgTime
+    df$RelAvgMemory <- df$AvgMemory / first$AvgMemory
+    all_data <- rbind(all_data, df)
 }
 all_data$K <- factor(all_data$K)
 graphs <- unique(all_data$Graph)
@@ -232,7 +278,23 @@ if (generate_per_instance) {
         create_theme_facet() +
         theme(legend.position = "right")
     print(p)
-    
+
+    # Memory Usage
+    p <- ggplot(normalized_data, aes(x = K, y = RelAvgMemory, fill = Algorithm)) +
+        ggtitle("Per Instance Memory Usage (rel. to first, lower is better)") +
+        geom_bar(
+            stat = "identity",
+            position = position_dodge()
+        ) +
+        ylab("Memory Usage rel. to Lowest") +
+        xlab("Number of Blocks") +
+        theme_bw() +
+        facet_wrap(~Title, ncol = side_len, scales = "free") +
+        geom_hline(yintercept = 1) +
+        create_theme_facet() +
+        theme(legend.position = "right")
+    print(p)
+
     dev.off()
 }
 
@@ -253,9 +315,9 @@ if (generate_per_instance_fm_batches) {
         df$Title <- factor(df$Title, levels = unique(df$Title[order(df$MaxDeg, decreasing = TRUE)]))
 
         p <- if (length(unique(df$Algorithm)) == 1) {
-            ggplot(df, aes(x = Distance, y = TotalGain, linetype = K))  
+            ggplot(df, aes(x = Distance, y = TotalGain, linetype = K))
         } else {
-            ggplot(df, aes(x = Distance, y = TotalGain, linetype = K, color = Algorithm)) 
+            ggplot(df, aes(x = Distance, y = TotalGain, linetype = K, color = Algorithm))
         }
 
         p <- p +
@@ -289,16 +351,16 @@ if (generate_fm_batches) {
             dplyr::mutate(Distance = Distance + 1) |>
             dplyr::group_by(Algorithm, K, Distance) |>
             dplyr::summarise(
-                TotalGainSum = (sum(TotalGain) + num_graphs - n()) / num_graphs, 
-                TotalSizeSum = (sum(TotalSize) + num_graphs - n()) / num_graphs, 
+                TotalGainSum = (sum(TotalGain) + num_graphs - n()) / num_graphs,
+                TotalSizeSum = (sum(TotalSize) + num_graphs - n()) / num_graphs,
                 .groups = "drop"
             ) |>
             dplyr::filter(Distance < cutoff_distance)
 
         p <- if (length(unique(df$Algorithm)) == 1) {
-            ggplot(df, aes(x = Distance, y = TotalGainSum, linetype = K))  
+            ggplot(df, aes(x = Distance, y = TotalGainSum, linetype = K))
         } else {
-            ggplot(df, aes(x = Distance, y = TotalGainSum, linetype = K, color = Algorithm)) 
+            ggplot(df, aes(x = Distance, y = TotalGainSum, linetype = K, color = Algorithm))
         }
 
         p <- p +

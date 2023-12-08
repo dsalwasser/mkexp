@@ -42,6 +42,10 @@ match($0, /`-- Partitioning: \.* *([0-9\.e\-]+) s/, m) {
     data["Time"] = m[1]
 }
 
+match($0, /Global Heap Profiler: \.* ([0-9\.]+)/, m) {
+    data["Memory"] = m[1]
+}
+
 match($0, /  Imbalance: *([0-9\.e\-]+)/, m) {
     data["Balance"] = m[1]
 }
@@ -62,6 +66,7 @@ function header() {
     printf "Epsilon,"
     printf "Balance,"
     printf "Time,"
+    printf "Memory,"
     printf "NumNodes,"
     printf "NumMPIsPerNode,"
     printf "NumThreadsPerMPI,"
@@ -78,6 +83,7 @@ function yield() {
     printf "%f,", data["Epsilon"]
     printf "%f,", data["Balance"]
     printf "%f,", data["Time"]
+    printf "%f,", data["Memory"]
     printf "%d,", data["NumNodes"]
     printf "%d,", data["NumMPIsPerNode"]
     printf "%d,", data["NumThreadsPerMPI"]

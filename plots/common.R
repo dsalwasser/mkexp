@@ -9,11 +9,11 @@ for (dep in DEPS) {
 }
 
 empty_min <- function(x) {
-    if (length(x[!is.na(x)]) > 0) {
-        return(min(x, na.rm = TRUE))
-    } else {
-        return(Inf)
-    }
+  if (length(x[!is.na(x)]) > 0) {
+    return(min(x, na.rm = TRUE))
+  } else {
+    return(Inf)
+  }
 }
 
 weakscaling_aggregator <- function(df) {
@@ -22,6 +22,7 @@ weakscaling_aggregator <- function(df) {
     AvgCut = mean(df$Cut, na.rm = TRUE),
     MinTime = empty_min(df$Time),
     AvgTime = mean(df$Time, na.rm = TRUE),
+    AvgMemory = mean(df$Memory, na.rm = TRUE),
     MinBalance = empty_min(df$Balance),
     M = max(df$M, na.rm = TRUE),
     N = max(df$N, na.rm = TRUE),
@@ -70,15 +71,16 @@ aggregate_data <- function(df, timelimit, aggregator, ignore_first_seed = FALSE)
   }
 
   vars <- colnames(df)
-  vars <- vars[! vars %in% c("Cut", "Balance", "Time", "Failed", "Timeout", "Seed")]
-  #df <- ddply(df, c("Algorithm", "Graph", "K", "Epsilon", "NumPEs", "NumNodes", "NumMPIsPerNode", "NumThreadsPerMPI", additional_cols), aggregator)
+  vars <- vars[!vars %in% c("Cut", "Balance", "Time", "Memory", "Failed", "Timeout", "Seed")]
+  # df <- ddply(df, c("Algorithm", "Graph", "K", "Epsilon", "NumPEs", "NumNodes", "NumMPIsPerNode", "NumThreadsPerMPI", additional_cols), aggregator)
   df <- ddply(df, vars, aggregator)
 
   df <- df %>%
     dplyr::mutate(AvgCut = ifelse(is.na(AvgCut), Inf, AvgCut)) %>%
     dplyr::mutate(MinCut = ifelse(is.na(MinCut), Inf, MinCut)) %>%
     dplyr::mutate(AvgTime = ifelse(is.na(AvgTime), Inf, AvgTime)) %>%
-    dplyr::mutate(MinTime = ifelse(is.na(MinTime), Inf, MinTime))
+    dplyr::mutate(MinTime = ifelse(is.na(MinTime), Inf, MinTime)) %>%
+    dplyr::mutate(AvgMemory = ifelse(is.na(AvgMemory), Inf, AvgMemory))
 
   df <- df %>%
     dplyr::mutate(Infeasible = !Failed & !Timeout & MinBalance > 0.03 + .Machine$double.eps) %>%
@@ -149,7 +151,7 @@ DEFAULT_ASPECT_RATIO <- 2 / (1 + sqrt(5))
 
 create_theme_facet <- function(aspect_ratio = DEFAULT_ASPECT_RATIO) {
   theme(
-    #aspect.ratio = aspect_ratio,
+    # aspect.ratio = aspect_ratio,
     legend.background = element_blank(),
     legend.title = element_blank(),
     legend.box.spacing = unit(0.1, "cm"),
