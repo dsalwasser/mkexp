@@ -17,10 +17,10 @@ Fetch() {
 FetchDiskDriver() {
     local -n fetch_disk_driver_args=$1
 
-    if [[ $KAMINPAR_USE_PUBLIC_REPOSITORY == 1 ]]; then
-        GenericGitFetch fetch_disk_driver_args "git@github.com:KaHIP/KaMinPar.git" "disk_driver_src"
+    if [[ -v KAMINPAR_PRIVATE_REPOSITORY_URL ]]; then
+        GenericGitFetch fetch_disk_driver_args $KAMINPAR_PRIVATE_REPOSITORY_URL "disk_driver_src"
     else 
-        GenericGitFetch fetch_disk_driver_args "git@github.com:DanielSeemaier/KaMinPar.git" "disk_driver_src"
+        GenericGitFetch fetch_disk_driver_args "https://github.com/KaHIP/KaMinPar.git" "disk_driver_src"
     fi
 }
 
