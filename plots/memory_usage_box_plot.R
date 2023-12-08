@@ -36,27 +36,25 @@ create_memory_usage_boxplot <- function(...,
   # Check for consistent data
   first_dataset <- all_datasets[[1]]
   for (dataset in all_datasets) {
-    stopifnot(column.memory %in% colnames(dataset))
     stopifnot(column.algorithm %in% colnames(dataset))
     stopifnot(column.timeout %in% colnames(dataset))
     stopifnot(column.infeasible %in% colnames(dataset))
-    stopifnot(!(NaN %in% dataset[[column.memory]]))
-    stopifnot(!(NA %in% dataset[[column.memory]]))
-    stopifnot(!(-Inf %in% dataset[[column.memory]]))
-    stopifnot(!(0 %in% dataset[[column.memory]]))
     stopifnot(nrow(dataset) == nrow(first_dataset))
     stopifnot(dataset[, primary_key] == first_dataset[, primary_key])
   }
 
-  # Merge data to one data frame
-  pp_data <- rbind(...) %>% dplyr::select(
-    Algorithm = rlang::sym(column.algorithm),
-    JitterMemory = rlang::sym(column.memory),
-    Memory = rlang::sym(column.memory),
-    Timeout = rlang::sym(column.timeout),
-    Infeasible = rlang::sym(column.infeasible),
-    Failed = rlang::sym(column.failed)
-  )
+  # Merge data to one data frame and keep only algorithms that track memory
+  pp_data <- rbind(...) %>%
+    dplyr::filter(!!rlang::sym(column.memory) > 0) %>%
+    dplyr::select(
+      Algorithm = rlang::sym(column.algorithm),
+      JitterMemory = rlang::sym(column.memory),
+      Memory = rlang::sym(column.memory),
+      Timeout = rlang::sym(column.timeout),
+      Infeasible = rlang::sym(column.infeasible),
+      Failed = rlang::sym(column.failed)
+    )
+  annotation <- annotation %>% dplyr::filter(Memory > 0)
 
   if (length(levels) > 0) {
     pp_data$Algorithm <- factor(

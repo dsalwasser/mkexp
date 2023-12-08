@@ -13,6 +13,7 @@ BEGIN {
     data["NumMPIsPerNode"] = -1
     data["NumThreadsPerMPI"] = -1
     data["Seed"] = -1
+    data["Memory"] = -1
     data["Epsilon"] = 0.03
 
     split(parts[2], parts, "_")
