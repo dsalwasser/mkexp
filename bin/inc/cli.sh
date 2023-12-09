@@ -68,6 +68,10 @@ while [[ $# -gt 0 ]]; do
             mode="init-mtkahypar-supermuc"
             shift
             ;;
+        --init-kaminpar-graph-compression)
+            mode="init-kaminpar-graph-compression"
+            shift
+            ;;
         --progress)
             mode="progress"
             shift 
