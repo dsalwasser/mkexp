@@ -72,6 +72,10 @@ while [[ $# -gt 0 ]]; do
             mode="init-kaminpar-graph-compression"
             shift
             ;;
+        --init-kaminpar-label-propagation)
+            mode="init-kaminpar-label-propagation"
+            shift
+            ;;            
         --progress)
             mode="progress"
             shift 
