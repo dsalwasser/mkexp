@@ -24,7 +24,6 @@
       devInputs = [
         pkgs.fish
         pkgs.rPackages.languageserver
-        mkexp
       ];
 
       mkexp = pkgs.stdenvNoCC.mkDerivation {
@@ -45,26 +44,24 @@
           homepage = "https://github.com/DanielSeemaier/mkexp";
         };
       };
+
+      mkDevShell = additionalInputs: pkgs.mkShell {
+        packages = inputs ++ devInputs ++ additionalInputs;
+
+        shellHook = ''
+          exec fish
+        '';
+      };
     in
     {
       devShells = {
-        default = pkgs.mkShell {
-          packages = inputs ++ devInputs;
+        default = mkDevShell [ ];
 
-          shellHook = ''
-            exec fish
-          '';
-        };
+        mkexp = mkDevShell [ mkexp ];
 
-        kaminpar = pkgs.mkShell {
-          packages = inputs ++ devInputs ++ builtins.attrValues {
-            inherit (pkgs) cmake ninja python312 gcc13 tbb_2021_8 sparsehash mpi;
-          };
-
-          shellHook = ''
-            exec fish
-          '';
-        };
+        kaminpar = mkDevShell ([ mkexp ] ++ devInputs ++ builtins.attrValues {
+          inherit (pkgs) cmake ninja python312 gcc13 tbb_2021_8 sparsehash mpi;
+        });
       };
 
       packages.default = mkexp;
