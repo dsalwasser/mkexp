@@ -232,10 +232,14 @@ if (generate_per_k_memory) {
 # Running time per instance plots
 all_data <- data.frame()
 first <- data[[1]]
+first_memory <- do.call(rbind.data.frame, data) %>%
+    dplyr::filter(AvgMemory > 0) %>%
+    dplyr::group_by(Algorithm) %>%
+    dplyr::filter(cur_group_id() == 1)
 for (df in data) {
     df$RelAvgCut <- df$AvgCut / first$AvgCut
     df$RelAvgTime <- df$AvgTime / first$AvgTime
-    df$RelAvgMemory <- df$AvgMemory / first$AvgMemory
+    df$RelAvgMemory <- df$AvgMemory / first_memory$AvgMemory
     all_data <- rbind(all_data, df)
 }
 all_data$K <- factor(all_data$K)
@@ -284,7 +288,8 @@ if (generate_per_instance) {
     print(p)
 
     # Memory Usage
-    p <- ggplot(normalized_data, aes(x = K, y = RelAvgMemory, fill = Algorithm)) +
+    normalized_memory_data <- normalized_data %>% dplyr::filter(AvgMemory > 0)
+    p <- ggplot(normalized_memory_data, aes(x = K, y = RelAvgMemory, fill = Algorithm)) +
         ggtitle("Per Instance Memory Usage (rel. to first, lower is better)") +
         geom_bar(
             stat = "identity",
