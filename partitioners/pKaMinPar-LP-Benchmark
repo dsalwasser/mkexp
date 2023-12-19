@@ -1,0 +1,10 @@
+#!/bin/bash
+
+. "$script_pwd/../partitioners/inc/git.sh"
+. "$script_pwd/../partitioners/inc/kagen-partitioner.sh"
+
+KAMINPAR_PRIVATE_REPOSITORY_URL="https://github.com/dsalwasser/KaMinPar.git"
+KAMINPAR_BENCHMARK_TARGET="shm_label_propagation_benchmark"
+
+. "$script_pwd/../partitioners/inc/kaminpar-benchmark.sh"
+

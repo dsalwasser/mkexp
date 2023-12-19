@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# This is a template for an label propagation micro benchmark experiment configuration file.
+
+# Define one algorithms which use 64-Bit edge IDs and edge weights.
+#
+DefineAlgorithmBuild pKaMinParLP64 pKaMinPar-LP-Benchmark -DKAMINPAR_64BIT_EDGE_IDS=On -DKAMINPAR_64BIT_WEIGHTS=On -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=On -DKAMINPAR_COMPRESSION_RUN_LENGTH_ENCODING=Off
+DefineAlgorithmBuild pKaMinParLP64-RLE pKaMinPar-LP-Benchmark -DKAMINPAR_64BIT_EDGE_IDS=On -DKAMINPAR_64BIT_WEIGHTS=On -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=On -DKAMINPAR_COMPRESSION_RUN_LENGTH_ENCODING=On
+
+# Defines two algorithm:
+# - KaMinPar fork with two-phase label propagation disabled
+# - KaMinPar fork with two-phase label propagation enabled
+#
+DefineAlgorithm KaMinPar-LP-Uncompressed pKaMinParLP64
+DefineAlgorithm KaMinPar-LP-Compressed pKaMinParLP64 --compress
+DefineAlgorithm KaMinPar-LP-Uncompressed-RLE pKaMinParLP64-RLE
+DefineAlgorithm KaMinPar-LP-Compressed-RLE pKaMinParLP64-RLE --compress
+
+# Pick a system for which the jobfiles should be generated:
+#
+System Generic
+# System Generic                # any Linux system
+# System i10                    # i10 compute servers, run experiment via "exclusive"
+# System i10-Nonexclusive       # i10 compute servers, run without "exclusive"
+# System i10-Parallel           # i10 + GNU Parallel (only use for sequential runs and if you don't need precise running times)
+# System HoreKa-TBB             # HoreKa with MPI only / MPI+TBB
+# System HoreKa-OMP             # HoreKa with MPI only / MPI+OpenMP
+# System SuperMUC               # SuperMUC with MPI only / MPI+TBB
+# System SuperMUC-SlotScheduler # SuperMUC for shared-memory or sequential jobs, that are executed in parallel on multiple jobs by a job scheduler
+
+# If you want to run this experiment on SuperMUC, provide additional parameters:
+#
+# Username <username>   # your SSH username for SuperMUC file transfer
+# Project <project>     # your SuperMUC project
+# Partition <partition> # *OPTIONAL*, if not set, job partition will be either micro, general or large, depending on the number of nodes
+
+# Pick a "call wrapper" that should be used to invoke the partitioners.
+#
+MPI none
+# MPI none    # do not run with mpirun etc.
+# MPI OpenMPI # run with mpirun
+# MPI IMPI    # run with Intel MPI (SuperMUC only)
+# MPI taskset # do not run with mpirun etc., but use taskset to limit CPU affinity
+
+ExperimentLabelPropagationMicroBenchmark() {
+    Algorithms KaMinPar-LP-Uncompressed KaMinPar-LP-Compressed KaMinPar-LP-Uncompressed-RLE KaMinPar-LP-Compressed-RLE
+
+    Ks 4 # Partition into 4 blocks
+    Seeds 1 2 3 # Perform repetitions with seeds 1, 2 and 3
+    Threads 1x1x4 1x1x64 # Run with 4 and 64 threads
+    #       | | +-- number of threads
+    #       | +-- number of MPI processes
+    #       +-- number of compute nodes
+
+    # Timelimit 1:00:00 # Abort experiment after one hour (optional)
+    # TimelimitPerInstance 30:00 # Abort one run after 30 minutes (optional)
+
+    Graphs /path/to/benchmark/set/ # Partition all graphs contained in some directory
+}

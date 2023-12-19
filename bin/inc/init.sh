@@ -14,3 +14,7 @@ if [[ $mode == "init-kaminpar-label-propagation" ]]; then
     cp "$ROOT/examples/KaMinPar-Label-Propagation" "$PWD/Experiment"
     exit 0
 fi
+if [[ $mode == "init-kaminpar-label-propagation-benchmark" ]]; then 
+    cp "$ROOT/examples/KaMinPar-Label-Propagation-Benchmark" "$PWD/Experiment"
+    exit 0
+fi

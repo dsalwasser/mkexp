@@ -75,7 +75,11 @@ while [[ $# -gt 0 ]]; do
         --init-kaminpar-label-propagation)
             mode="init-kaminpar-label-propagation"
             shift
-            ;;            
+            ;;
+        --init-kaminpar-label-propagation-benchmark)
+            mode="init-kaminpar-label-propagation-benchmark"
+            shift
+            ;;
         --progress)
             mode="progress"
             shift 
