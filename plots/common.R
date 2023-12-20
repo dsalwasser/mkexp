@@ -8,6 +8,8 @@ for (dep in DEPS) {
   }
 }
 
+`%notin%` <- Negate(`%in%`)
+
 empty_min <- function(x) {
   if (length(x[!is.na(x)]) > 0) {
     return(min(x, na.rm = TRUE))
@@ -22,6 +24,10 @@ weakscaling_aggregator <- function(df) {
     AvgCut = mean(df$Cut, na.rm = TRUE),
     MinTime = empty_min(df$Time),
     AvgTime = mean(df$Time, na.rm = TRUE),
+    AvgClusteringTime = mean(df$ClusteringTime, na.rm = TRUE),
+    AvgContractionTime = mean(df$ContractionTime, na.rm = TRUE),
+    AvgInitialPartitioningTime = mean(df$InitialPartitioningTime, na.rm = TRUE),
+    AvgRefinementTime = mean(df$RefinementTime, na.rm = TRUE),
     AvgMemory = mean(df$Memory, na.rm = TRUE),
     MinBalance = empty_min(df$Balance),
     M = max(df$M, na.rm = TRUE),
@@ -37,6 +43,9 @@ aggregate_data <- function(df, timelimit, aggregator, ignore_first_seed = FALSE)
   }
   if (!("Failed" %in% colnames(df))) {
     df$Failed <- FALSE
+  }
+  if (!("Cut" %in% colnames(df))) {
+    df$Cut <- NA
   }
   if (!("Epsilon" %in% colnames(df))) {
     df$Epsilon <- 0.03
@@ -71,7 +80,7 @@ aggregate_data <- function(df, timelimit, aggregator, ignore_first_seed = FALSE)
   }
 
   vars <- colnames(df)
-  vars <- vars[!vars %in% c("Cut", "Balance", "Time", "Memory", "Failed", "Timeout", "Seed")]
+  vars <- vars[!vars %in% c("Cut", "Balance", "Time", "ClusteringTime", "ContractionTime", "InitialPartitioningTime", "RefinementTime", "Memory", "Failed", "Timeout", "Seed")]
   # df <- ddply(df, c("Algorithm", "Graph", "K", "Epsilon", "NumPEs", "NumNodes", "NumMPIsPerNode", "NumThreadsPerMPI", additional_cols), aggregator)
   df <- ddply(df, vars, aggregator)
 
@@ -79,6 +88,10 @@ aggregate_data <- function(df, timelimit, aggregator, ignore_first_seed = FALSE)
     dplyr::mutate(AvgCut = ifelse(is.na(AvgCut), Inf, AvgCut)) %>%
     dplyr::mutate(MinCut = ifelse(is.na(MinCut), Inf, MinCut)) %>%
     dplyr::mutate(AvgTime = ifelse(is.na(AvgTime), Inf, AvgTime)) %>%
+    dplyr::mutate(AvgClusteringTime = ifelse(is.na(AvgClusteringTime), Inf, AvgClusteringTime)) %>%
+    dplyr::mutate(AvgContractionTime = ifelse(is.na(AvgContractionTime), Inf, AvgContractionTime)) %>%
+    dplyr::mutate(AvgInitialPartitioningTime = ifelse(is.na(AvgInitialPartitioningTime), Inf, AvgInitialPartitioningTime)) %>%
+    dplyr::mutate(AvgRefinementTime = ifelse(is.na(AvgRefinementTime), Inf, AvgRefinementTime)) %>%
     dplyr::mutate(MinTime = ifelse(is.na(MinTime), Inf, MinTime)) %>%
     dplyr::mutate(AvgMemory = ifelse(is.na(AvgMemory), Inf, AvgMemory))
 
@@ -121,7 +134,7 @@ load_data <- function(name, file, seed = 0) {
     print("Warning: no Epsilon column; default to 3%")
     df$Epsilon <- 0.03
   }
-  if (!("Balance" %in% colnames(df)) & "Imbalance" %in% colnames(df)) {
+  if (!("Balance" %in% colnames(df)) && "Imbalance" %in% colnames(df)) {
     df$Balance <- df$Imbalance
   } else if (!("Balance" %in% colnames(df))) {
     print("Warning: ignoring balance")

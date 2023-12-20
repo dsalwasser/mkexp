@@ -13,7 +13,13 @@ BEGIN {
     data["NumMPIsPerNode"] = -1
     data["NumThreadsPerMPI"] = -1
     data["Seed"] = -1
+    data["ClusteringTime"] = 0
+    data["ContractionTime"] = 0
+    data["InitialPartitioningTime"] = 0
+    data["RefinementTime"] = 0
     data["Memory"] = -1
+    data["CompressionRatio"] = -1
+    data["SizeReduction"] = -1
     data["Epsilon"] = 0.03
 
     split(parts[2], parts, "_")
@@ -30,6 +36,8 @@ BEGIN {
             data["Epsilon"] = m[1]
         }
     }
+
+    coarsening = 0
 }
 
 /__END_FILE__/ {
@@ -43,8 +51,39 @@ match($0, /`-- Partitioning: \.* *([0-9\.e\-]+) s/, m) {
     data["Time"] = m[1]
 }
 
+match($0, /Coarsening: \.* *([0-9\.e\-]+) s/, m) {
+    coarsening = 1
+}
+
+match($0, /Label Propagation: \.* *([0-9\.e\-]+) s/, m) {
+    if (coarsening) {
+        data["ClusteringTime"] += m[1]
+    }
+}
+
+match($0, /Contract graph: \.* ([0-9\.e\-]+) s/, m) {
+    data["ContractionTime"] += m[1]
+}
+
+match($0, /Initial partitioning: \.* ([0-9\.e\-]+) s/, m) {
+    data["InitialPartitioningTime"] = m[1]
+}
+
+match($0, /Refinement: \.* ([0-9\.e\-]+) s/, m) {
+    data["RefinementTime"] = m[1]
+    coarsening = 0
+}
+
 match($0, /Global Heap Profiler: \.* ([0-9\.]+)/, m) {
     data["Memory"] = m[1]
+}
+
+match($0, /Compresion Ratio: * ([0-9\.]+)/, m) {
+    data["CompressionRatio"] = m[1]
+}
+
+match($0, /Compresion Ratio: * [0-9\.]+ \[size reduction: ([0-9\.]+) mb\]/, m) {
+    data["SizeReduction"] = m[1]
 }
 
 match($0, /  Imbalance: *([0-9\.e\-]+)/, m) {
@@ -67,7 +106,13 @@ function header() {
     printf "Epsilon,"
     printf "Balance,"
     printf "Time,"
+    printf "ClusteringTime,"
+    printf "ContractionTime,"
+    printf "InitialPartitioningTime,"
+    printf "RefinementTime,"
     printf "Memory,"
+    # printf "CompressionRatio,"
+    # printf "SizeReduction,"
     printf "NumNodes,"
     printf "NumMPIsPerNode,"
     printf "NumThreadsPerMPI,"
@@ -84,7 +129,13 @@ function yield() {
     printf "%f,", data["Epsilon"]
     printf "%f,", data["Balance"]
     printf "%f,", data["Time"]
+    printf "%f,", data["ClusteringTime"]
+    printf "%f,", data["ContractionTime"]
+    printf "%f,", data["InitialPartitioningTime"]
+    printf "%f,", data["RefinementTime"]
     printf "%f,", data["Memory"]
+    # printf "%f,", data["CompressionRatio"]
+    # printf "%f,", data["SizeReduction"]
     printf "%d,", data["NumNodes"]
     printf "%d,", data["NumMPIsPerNode"]
     printf "%d,", data["NumThreadsPerMPI"]
