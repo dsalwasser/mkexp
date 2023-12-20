@@ -108,9 +108,22 @@ gmean_memory_usage <- data.frame(Algorithm = factor(), Memory = numeric())
 
 for (algorithm in algorithms) {
   algorithm_data_path <- paste0(getwd(), "/results/", algorithm, ".csv")
-  df <- load_data(algorithm, algorithm_data_path) %>%
-    dplyr::mutate(Algorithm = paste0(Algorithm, "-", NumThreadsPerMPI))
+  df <- load_data(algorithm, algorithm_data_path)
 
+  if ("CompressionRatio" %in% colnames(df) && df$CompressionRatio[1] > 0) {
+    df_cr <- df %>%
+      group_by(Graph) %>%
+      filter(row_number() == 1)
+
+    ggplot2::ggplot(df_cr) +
+      geom_col(aes(x = Graph, y = CompressionRatio)) +
+      theme_bw() +
+      create_theme_facet() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    ggplot2::ggsave(path = "plots", filename = "compression-ratio.pdf", width = 30)
+  }
+
+  df <- df %>% dplyr::mutate(Algorithm = paste0(Algorithm, "-", NumThreadsPerMPI))
   df <- merge(df, graphs_db, by = "Graph", all.x = TRUE)
 
   if (df$AvgCut[1] == Inf) {

@@ -111,8 +111,8 @@ function header() {
     printf "InitialPartitioningTime,"
     printf "RefinementTime,"
     printf "Memory,"
-    # printf "CompressionRatio,"
-    # printf "SizeReduction,"
+    printf "CompressionRatio,"
+    printf "SizeReduction,"
     printf "NumNodes,"
     printf "NumMPIsPerNode,"
     printf "NumThreadsPerMPI,"
@@ -134,8 +134,8 @@ function yield() {
     printf "%f,", data["InitialPartitioningTime"]
     printf "%f,", data["RefinementTime"]
     printf "%f,", data["Memory"]
-    # printf "%f,", data["CompressionRatio"]
-    # printf "%f,", data["SizeReduction"]
+    printf "%f,", data["CompressionRatio"]
+    printf "%f,", data["SizeReduction"]
     printf "%d,", data["NumNodes"]
     printf "%d,", data["NumMPIsPerNode"]
     printf "%d,", data["NumThreadsPerMPI"]
