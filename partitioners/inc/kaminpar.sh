@@ -45,14 +45,24 @@ InstallDiskDriver() {
     echo -e "  - Algorithm-specific CMake options: $ARGS_COLOR${install_disk_driver_args[algorithm_build_options]}$NO_COLOR"
     echo ""
 
-    Prefixed cmake -S "$src_dir" \
+    if [[ -v KAMINPAR_BENCHMARK_TARGET ]]; then
+        Prefixed cmake -S "$src_dir" \
         -B "$src_dir/build" \
         -DCMAKE_BUILD_TYPE=Release \
-        -DKAMINPAR_BUILD_DISTRIBUTED=Off \
+        -DKAMINPAR_BUILD_BENCHMARKS=On \
         $CUSTOM_CMAKE_FLAGS \
         ${install_disk_driver_args[algorithm_build_options]}
-    Prefixed cmake --build "$src_dir/build" --target KaMinPar --parallel
-    Prefixed cp "$src_dir/build/apps/KaMinPar" "${install_disk_driver_args[disk_driver_bin]}"
+        Prefixed cmake --build "$src_dir/build" --target $KAMINPAR_BENCHMARK_TARGET --parallel
+        Prefixed cp "$src_dir/build/apps/benchmarks/$KAMINPAR_BENCHMARK_TARGET" "${install_disk_driver_args[disk_driver_bin]}"
+    else
+        Prefixed cmake -S "$src_dir" \
+        -B "$src_dir/build" \
+        -DCMAKE_BUILD_TYPE=Release \
+        $CUSTOM_CMAKE_FLAGS \
+        ${install_disk_driver_args[algorithm_build_options]}
+        Prefixed cmake --build "$src_dir/build" --target KaMinPar --parallel
+        Prefixed cp "$src_dir/build/apps/KaMinPar" "${install_disk_driver_args[disk_driver_bin]}"
+    fi
 }
 
 InvokeFromDisk() {
@@ -71,7 +81,9 @@ InvokeFromDisk() {
         >&2 echo -e "      -e $ARGS_COLOR${invoke_from_disk_args[epsilon]}$NO_COLOR"
         >&2 echo -e "      --seed=$ARGS_COLOR${invoke_from_disk_args[seed]}$NO_COLOR"
         >&2 echo -e "      -t $ARGS_COLOR${invoke_from_disk_args[num_threads]}$NO_COLOR"
-        >&2 echo "      -T"
+        if [[ ! -v KAMINPAR_BENCHMARK_TARGET ]]; then
+            >&2 echo "      -T"
+        fi
         >&2 echo -e "  - Specified arguments: $ARGS_COLOR${invoke_from_disk_args[algorithm_arguments]}$NO_COLOR"
         >&2 echo "[...]"
         >&2 echo ""
@@ -84,7 +96,9 @@ InvokeFromDisk() {
         echo -n "-e ${invoke_from_disk_args[epsilon]} "
         echo -n "--seed=${invoke_from_disk_args[seed]} "
         echo -n "-t ${invoke_from_disk_args[num_threads]} "
-        echo -n "-T "
+        if [[ ! -v KAMINPAR_BENCHMARK_TARGET ]]; then
+            echo -n "-T "
+        fi
         echo -n "${invoke_from_disk_args[algorithm_arguments]}"
         echo ""
     else 
