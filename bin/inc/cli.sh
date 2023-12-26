@@ -68,16 +68,16 @@ while [[ $# -gt 0 ]]; do
             mode="init-mtkahypar-supermuc"
             shift
             ;;
-        --init-kaminpar-graph-compression)
-            mode="init-kaminpar-graph-compression"
-            shift
-            ;;
         --init-kaminpar-label-propagation)
             mode="init-kaminpar-label-propagation"
             shift
             ;;
-        --init-kaminpar-label-propagation-benchmark)
-            mode="init-kaminpar-label-propagation-benchmark"
+        --init-kaminpar-graph-compression)
+            mode="init-kaminpar-graph-compression"
+            shift
+            ;;
+        --init-kaminpar-graph-compression-encoding)
+            mode="init-kaminpar-graph-compression-encoding"
             shift
             ;;
         --progress)

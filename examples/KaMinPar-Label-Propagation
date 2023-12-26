@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This is a template for an label propagation experiment configuration file.
+# This is a template for a label propagation experiment configuration file.
 
 # Define one algorithms which use 64-Bit edge IDs and edge weights.
 #

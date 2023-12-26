@@ -1,19 +1,27 @@
 #!/bin/bash
 
-# This is a template for an label propagation micro benchmark experiment configuration file.
+# This is a template for a graph compression encoding micro benchmark experiment configuration file.
 
-# Define two algorithms which both use 64-Bit edge IDs and edge weights. One algorithm uses run-length encoding and the other does not.
+# Define three algorithms which all use 64-Bit edge IDs and edge weights. One algorithm uses
+# only variable length and gap encoding, the others additionally use high-degree encoding, interval
+# encoding and run-length encoding respectively.
 #
-DefineAlgorithmBuild pKaMinParLP64 pKaMinPar-LP-Benchmark -DKAMINPAR_64BIT_EDGE_IDS=On -DKAMINPAR_64BIT_WEIGHTS=On -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=On -DKAMINPAR_COMPRESSION_RUN_LENGTH_ENCODING=Off
-DefineAlgorithmBuild pKaMinParLP64-RLE pKaMinPar-LP-Benchmark -DKAMINPAR_64BIT_EDGE_IDS=On -DKAMINPAR_64BIT_WEIGHTS=On -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=On -DKAMINPAR_COMPRESSION_RUN_LENGTH_ENCODING=On
+DefineAlgorithmBuild pKaMinParLP64 pKaMinPar-LP-Benchmark -DKAMINPAR_64BIT_EDGE_IDS=On -DKAMINPAR_64BIT_WEIGHTS=On -DKAMINPAR_COMPRESSION_HIGH_DEGREE_ENCODING=Off -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=Off -DKAMINPAR_COMPRESSION_RUN_LENGTH_ENCODING=Off
+DefineAlgorithmBuild pKaMinParLP64-HDE pKaMinPar-LP-Benchmark -DKAMINPAR_64BIT_EDGE_IDS=On -DKAMINPAR_64BIT_WEIGHTS=On -DKAMINPAR_COMPRESSION_HIGH_DEGREE_ENCODING=On -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=Off -DKAMINPAR_COMPRESSION_RUN_LENGTH_ENCODING=Off
+DefineAlgorithmBuild pKaMinParLP64-IE pKaMinPar-LP-Benchmark -DKAMINPAR_64BIT_EDGE_IDS=On -DKAMINPAR_64BIT_WEIGHTS=On -DKAMINPAR_COMPRESSION_HIGH_DEGREE_ENCODING=Off -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=On -DKAMINPAR_COMPRESSION_RUN_LENGTH_ENCODING=Off
+DefineAlgorithmBuild pKaMinParLP64-RLE pKaMinPar-LP-Benchmark -DKAMINPAR_64BIT_EDGE_IDS=On -DKAMINPAR_64BIT_WEIGHTS=On -DKAMINPAR_COMPRESSION_HIGH_DEGREE_ENCODING=Off -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=Off -DKAMINPAR_COMPRESSION_RUN_LENGTH_ENCODING=On
 
-# Defines three algorithm:
+# Defines five algorithms:
 # - KaMinPar label propagation micro-benchmark without graph compression
 # - KaMinPar label propagation micro-benchmark with graph compression
-# - KaMinPar label propagation micro-benchmark with graph compression and run-length encoding
+# - KaMinPar label propagation micro-benchmark with graph compression using high-degree encoding
+# - KaMinPar label propagation micro-benchmark with graph compression using interval encoding
+# - KaMinPar label propagation micro-benchmark with graph compression using run-length encoding
 #
 DefineAlgorithm KaMinPar-LP-Uncompressed pKaMinParLP64
 DefineAlgorithm KaMinPar-LP-Compressed pKaMinParLP64 --compress
+DefineAlgorithm KaMinPar-LP-Compressed-HDE pKaMinParLP64-HDE --compress
+DefineAlgorithm KaMinPar-LP-Compressed-IE pKaMinParLP64-IE --compress
 DefineAlgorithm KaMinPar-LP-Compressed-RLE pKaMinParLP64-RLE --compress
 
 # Pick a system for which the jobfiles should be generated:
@@ -42,8 +50,8 @@ MPI none
 # MPI IMPI    # run with Intel MPI (SuperMUC only)
 # MPI taskset # do not run with mpirun etc., but use taskset to limit CPU affinity
 
-ExperimentLabelPropagationMicroBenchmark() {
-    Algorithms KaMinPar-LP-Uncompressed KaMinPar-LP-Compressed KaMinPar-LP-Compressed-RLE
+ExperimentGraphCompressionEncoding() {
+    Algorithms KaMinPar-LP-Uncompressed KaMinPar-LP-Compressed KaMinPar-LP-Compressed-HDE KaMinPar-LP-Compressed-IE KaMinPar-LP-Compressed-RLE
 
     Ks 4 # Partition into 4 blocks
     Seeds 1 2 3 # Perform repetitions with seeds 1, 2 and 3

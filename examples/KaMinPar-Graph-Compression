@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This is a template for an KaMinPar graph compression experiment configuration file.
+# This is a template for a KaMinPar graph compression experiment configuration file.
 
 # Define two algorithms which use 64-Bit edge IDs and edge weights.
 #
@@ -12,13 +12,14 @@ DefineAlgorithmBuild pKaMinPar64 pKaMinPar -DKAMINPAR_64BIT_EDGE_IDS=On -DKAMINP
 # - KaMinPar fork with memory usage changes and disabled graph compression
 # - KaMinPar fork with memory usage changes and enabled graph compression
 #
-DefineAlgorithm KaMinPar-Reference KaMinPar64
-DefineAlgorithm KaMinPar-Uncompressed pKaMinPar64
-DefineAlgorithm KaMinPar-Compressed pKaMinPar64 --rearrange-by natural --compress
+DefineAlgorithm KaMinPar-Reference KaMinPar64 --rearrange-by natural
+DefineAlgorithm KaMinPar-Uncompressed pKaMinPar64 --node-order natural
+DefineAlgorithm KaMinPar-Compressed pKaMinPar64 --node-order natural --compress
 
 # Pick a system for which the jobfiles should be generated:
 #
-System Generic                  # any Linux system
+System Generic
+# System Generic                # any Linux system
 # System i10                    # i10 compute servers, run experiment via "exclusive"
 # System i10-Nonexclusive       # i10 compute servers, run without "exclusive"
 # System i10-Parallel           # i10 + GNU Parallel (only use for sequential runs and if you don't need precise running times)
@@ -35,13 +36,13 @@ System Generic                  # any Linux system
 
 # Pick a "call wrapper" that should be used to invoke the partitioners.
 #
-MPI none # do not run with mpirun etc.
-#
+MPI none
+# MPI none    # do not run with mpirun etc.
 # MPI OpenMPI # run with mpirun
 # MPI IMPI    # run with Intel MPI (SuperMUC only)
 # MPI taskset # do not run with mpirun etc., but use taskset to limit CPU affinity
 
-ExperimentMemoryUsage() {
+ExperimentGraphCompression() {
     Algorithms KaMinPar-Reference KaMinPar-Uncompressed KaMinPar-Compressed
 
     Ks 4 8 16 # Partition into 4, 8 and 16 blocks
