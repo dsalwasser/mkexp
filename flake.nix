@@ -13,12 +13,15 @@
       inputs = [
         pkgs.gettext
         pkgs.R
+        pkgs.rPackages.cli
         pkgs.rPackages.ggplot2
         pkgs.rPackages.plyr
         pkgs.rPackages.dplyr
+        pkgs.rPackages.tidyverse
         pkgs.rPackages.RColorBrewer
         pkgs.rPackages.gridExtra
         pkgs.rPackages.egg
+        pkgs.rPackages.this_path
       ];
 
       devInputs = [
