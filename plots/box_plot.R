@@ -31,6 +31,7 @@ create_boxplot <- function(...,
                            label_pdf_failed = "failed",
                            colors = c(),
                            levels = c(),
+                           column_fill = "",
                            annotation = data.frame(),
                            position_y = "left",
                            tiny = FALSE) {
@@ -58,18 +59,33 @@ create_boxplot <- function(...,
   }
 
   # Merge data to one data frame
-  pp_data <- rbind(...) %>% dplyr::select(
-    Algorithm = rlang::sym(column_algorithm),
-    Statistic = rlang::sym(column_statistic),
-    JitterStatistic = rlang::sym(column_statistic),
-    Timeout = rlang::sym(column_timeout),
-    Infeasible = rlang::sym(column_infeasible),
-    Failed = rlang::sym(column_failed)
-  )
+  use_fill <- nchar(column_fill) > 0
+  if (use_fill) {
+    pp_data <- rbind(...) %>% dplyr::select(
+      Algorithm = rlang::sym(column_algorithm),
+      Statistic = rlang::sym(column_statistic),
+      JitterStatistic = rlang::sym(column_statistic),
+      Timeout = rlang::sym(column_timeout),
+      Infeasible = rlang::sym(column_infeasible),
+      Failed = rlang::sym(column_failed),
+      Fill = rlang::sym(column_fill)
+    )
+  } else {
+    pp_data <- rbind(...) %>% dplyr::select(
+      Algorithm = rlang::sym(column_algorithm),
+      Statistic = rlang::sym(column_statistic),
+      JitterStatistic = rlang::sym(column_statistic),
+      Timeout = rlang::sym(column_timeout),
+      Infeasible = rlang::sym(column_infeasible),
+      Failed = rlang::sym(column_failed)
+    )
+  }
 
   # Only keep algorithms that track the statistic
   pp_data <- pp_data %>% dplyr::filter(Statistic > 0)
-  annotation <- annotation %>% dplyr::filter(!!rlang::sym(statistic) > 0)
+  if (nrow(annotation) > 0) {
+    annotation <- annotation %>% dplyr::filter(!!rlang::sym(statistic) > 0)
+  }
 
   if (length(levels) > 0) {
     pp_data$Algorithm <- factor(
@@ -150,14 +166,28 @@ create_boxplot <- function(...,
 
   jitter_size <- if (tiny) 0.5 else 0.75
 
-  p <- ggplot2::ggplot(pp_data, aes(x = Algorithm, y = Statistic)) +
-    ggplot2::geom_jitter(
-      aes(y = JitterStatistic, color = Algorithm, fill = Algorithm),
-      size = jitter_size,
-      alpha = 0.33,
-      pch = 21,
-      width = 0.3
-    ) +
+
+  p <- if (use_fill) {
+    ggplot2::ggplot(pp_data, aes(x = Algorithm, y = Statistic, fill = Fill)) +
+      ggplot2::geom_jitter(
+        aes(y = JitterStatistic, color = Algorithm, fill = Fill),
+        size = jitter_size,
+        alpha = 0.33,
+        pch = 21,
+        width = 0.3
+      )
+  } else {
+    ggplot2::ggplot(pp_data, aes(x = Algorithm, y = Statistic)) +
+      ggplot2::geom_jitter(
+        aes(y = JitterStatistic, color = Algorithm, fill = Algorithm),
+        size = jitter_size,
+        alpha = 0.33,
+        pch = 21,
+        width = 0.3
+      )
+  }
+
+  p <- p +
     ggplot2::stat_boxplot(
       aes(color = Algorithm),
       geom = "errorbar",
@@ -184,16 +214,31 @@ create_boxplot <- function(...,
   }
 
   if (nrow(annotation) > 0) {
-    p <- p + ggplot2::geom_text(
-      ggplot2::aes(
-        x = Algorithm,
-        label = sprintf("%.1f", !!rlang::sym(statistic)),
-        vjust = -0.5
-      ),
-      y = -Inf,
-      annotation,
-      size = 2.5
-    )
+    if (use_fill) {
+      p <- p + ggplot2::geom_text(
+        ggplot2::aes(
+          x = Algorithm,
+          y = 0,
+          label = sprintf("%.1f", !!rlang::sym(statistic)),
+          vjust = -0.5,
+          group = Fill
+        ),
+        annotation,
+        position = position_dodge(width = .9),
+        size = 2.5
+      )
+    } else {
+      p <- p + ggplot2::geom_text(
+        ggplot2::aes(
+          x = Algorithm,
+          label = sprintf("%.1f", !!rlang::sym(statistic)),
+          vjust = -0.5
+        ),
+        y = -Inf,
+        annotation,
+        size = 2.5
+      )
+    }
   }
 
   # Set colors

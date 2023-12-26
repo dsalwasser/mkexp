@@ -2,19 +2,34 @@
 options(show.error.locations = TRUE)
 options(error = traceback)
 
-# Load plotting functions
+# Install and load required libraries
+libs <- c("cli", "ggplot2", "plyr", "dplyr", "tidyr", "RColorBrewer", "gridExtra", "egg")
+for (lib in libs) {
+  if (!require(lib, character.only = TRUE, warn.conflicts = FALSE, quietly = TRUE)) {
+    install.packages(lib)
+  }
+
+  library(lib, character.only = TRUE, quietly = TRUE)
+}
+
+# Load scripts
 args <- commandArgs(trailingOnly = FALSE)
 file_name <- "--file="
 script_name <- sub(file_name, "", args[grep(file_name, args)])
 script_basename <- dirname(script_name)
 
-load_functions <- function(name) {
+load_script <- function(name) {
   source(file.path(script_basename, "../plots/", name), chdir = TRUE)
 }
 
-load_functions("performance_profile_plot.R")
-load_functions("box_plot.R")
+load_script("data_loader.R")
+load_script("stat_plot.R")
+load_script("cut_plot.R")
+load_script("timing_plot.R")
+load_script("memory_plot.R")
+load_script("per_instance_plot.R")
 
+# Load statistics of known graphs
 graphs_db <- read.csv(
   file.path(script_basename, "../data/graphs.csv"),
   header = TRUE,
@@ -25,517 +40,97 @@ if (!dir.exists("plots")) {
   dir.create("plots")
 }
 
-# CLI arguments == algorithms to look at
-generate_all_cut <- FALSE
-generate_pairwise_cut <- FALSE
-
-generate_all_time <- FALSE
-generate_clustering_time <- FALSE
-generate_contraction_time <- FALSE
-generate_initial_partitioning_time <- FALSE
-generate_refinement_time <- FALSE
-
-generate_per_k_time <- FALSE
-generate_per_k_clustering_time <- FALSE
-generate_per_k_contraction_time <- FALSE
-generate_per_k_initial_partitioning_time <- FALSE
-generate_per_k_refinement_time <- FALSE
-
-generate_all_memory <- FALSE
-generate_per_k_memory <- FALSE
-
-generate_per_instance <- FALSE
-
-generate_per_instance_fm_batches <- FALSE
-generate_fm_batches <- FALSE
-generate_ss <- FALSE
-
-picked_plot <- FALSE
-
-algorithms <- commandArgs(trailingOnly = TRUE)
-if (length(algorithms) > 0) {
-  mode <- algorithms[1]
-  picked_plot <- TRUE
-
-  if (mode == "--basic") {
-    generate_all_cut <- TRUE
-    generate_all_time <- TRUE
-  } else if (mode == "--all-cut") {
-    generate_all_cut <- TRUE
-  } else if (mode == "--per-instance") {
-    generate_per_instance <- TRUE
-  } else if (mode == "--pairwise-cut") {
-    generate_pairwise_cut <- TRUE
-  } else if (mode == "--all-time") {
-    generate_all_time <- TRUE
-  } else if (mode == "--all-memory") {
-    generate_all_memory <- TRUE
-  } else if (mode == "--per-instance-fm-batches") {
-    generate_per_instance_fm_batches <- TRUE
-  } else if (mode == "--fm-batches") {
-    generate_fm_batches <- TRUE
-  } else if (mode == "--per-k-time") {
-    generate_per_k_time <- TRUE
-  } else if (mode == "--per-k-memory") {
-    generate_per_k_memory <- TRUE
-  } else if (mode == "--ss") {
-    generate_ss <- TRUE
-  } else {
-    picked_plot <- FALSE
-  }
-
-  if (picked_plot) {
-    algorithms <- algorithms[-1]
-  }
-}
-
-if (!picked_plot) {
-  generate_all_cut <- TRUE
-  generate_per_instance <- TRUE
-  generate_all_time <- TRUE
-  generate_all_memory <- TRUE
-  generate_pairwise_cut <- TRUE
-}
-
 # Load result file for each algorithm
+algorithms <- commandArgs(trailingOnly = TRUE)
 data <- list()
-gmean_running_times <- data.frame(Algorithm = factor(), Time = numeric())
-gmean_clustering_times <- data.frame(Algorithm = factor(), Time = numeric())
-gmean_contraction_times <- data.frame(Algorithm = factor(), Time = numeric())
-gmean_initial_partitioning_times <- data.frame(Algorithm = factor(), Time = numeric())
-gmean_refinement_times <- data.frame(Algorithm = factor(), Time = numeric())
-gmean_memory_usage <- data.frame(Algorithm = factor(), Memory = numeric())
+
+generate_all_cut <- TRUE
+generate_pairwise_cut <- TRUE
+generate_all_time <- TRUE
+generate_detailed_time <- TRUE
+generate_all_memory <- TRUE
+generate_detailed_memory <- TRUE
+generate_compression_ratio <- TRUE
+generate_per_k <- TRUE
+generate_per_instance <- TRUE
 
 for (algorithm in algorithms) {
   algorithm_data_path <- paste0(getwd(), "/results/", algorithm, ".csv")
-  df <- load_data(algorithm, algorithm_data_path)
+  df <- load_data(algorithm, algorithm_data_path) %>%
+    dplyr::mutate(Algorithm = paste0(Algorithm, "-", NumThreadsPerMPI))
 
-  if ("CompressionRatio" %in% colnames(df) && df$CompressionRatio[1] > 0) {
-    df_cr <- df %>%
-      group_by(Graph) %>%
-      filter(row_number() == 1)
-
-    ggplot2::ggplot(df_cr) +
-      geom_col(aes(x = Graph, y = CompressionRatio)) +
-      theme_bw() +
-      create_theme_facet() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))
-    ggplot2::ggsave(path = "plots", filename = "compression-ratio.pdf", width = 30)
-  }
-
-  df <- df %>% dplyr::mutate(Algorithm = paste0(Algorithm, "-", NumThreadsPerMPI))
+  # Add statistics of known graphs to the data
   df <- merge(df, graphs_db, by = "Graph", all.x = TRUE)
-
-  if (df$AvgCut[1] == Inf) {
-    generate_all_cut <- FALSE
-    generate_pairwise_cut <- FALSE
-  }
-
-  if (df$AvgClusteringTime[1] == Inf) {
-    generate_clustering_time <- FALSE
-  }
-
-  if (df$AvgContractionTime[1] == Inf) {
-    generate_contraction_time <- FALSE
-  }
-
-  if (df$AvgInitialPartitioningTime[1] == Inf) {
-    generate_initial_partitioning_time <- FALSE
-  }
-
-  if (df$AvgRefinementTime[1] == Inf) {
-    generate_refinement_time <- FALSE
-  }
 
   thread_configs <- unique(df$NumThreadsPerMPI)
   for (thread_config in thread_configs) {
     subdf <- df %>% dplyr::filter(NumThreadsPerMPI == thread_config)
-
-    gmean_running_times <- gmean_running_times |>
-      rbind(data.frame(
-        Algorithm = factor(paste0(algorithm, "-", thread_config)),
-        Time = mean(subdf$AvgTime)
-      ))
-
-    gmean_clustering_times <- gmean_clustering_times |>
-      rbind(data.frame(
-        Algorithm = factor(paste0(algorithm, "-", thread_config)),
-        Time = mean(subdf$AvgClusteringTime)
-      ))
-
-    gmean_contraction_times <- gmean_contraction_times |>
-      rbind(data.frame(
-        Algorithm = factor(paste0(algorithm, "-", thread_config)),
-        Time = mean(subdf$AvgContractionTime)
-      ))
-
-    gmean_initial_partitioning_times <- gmean_initial_partitioning_times |>
-      rbind(data.frame(
-        Algorithm = factor(paste0(algorithm, "-", thread_config)),
-        Time = mean(subdf$AvgInitialPartitioningTime)
-      ))
-
-    gmean_refinement_times <- gmean_refinement_times |>
-      rbind(data.frame(
-        Algorithm = factor(paste0(algorithm, "-", thread_config)),
-        Time = mean(subdf$AvgRefinementTime)
-      ))
-
-    gmean_memory_usage <- gmean_memory_usage |>
-      rbind(data.frame(
-        Algorithm = factor(paste0(algorithm, "-", thread_config)),
-        Memory = mean(subdf$AvgMemory)
-      ))
-
     data <- append(data, list(subdf))
   }
-}
 
-ks <- unique(data[[1]]$K)
-graphs <- unique(data[[1]]$Graph)
-num_unique_graphs <- length(unique(data[[1]]$Graph))
-
-if (!generate_per_instance_fm_batches && !generate_fm_batches) {
-  for (i in seq_along(data)) {
-    n_before <- nrow(data[[i]])
-    data[[i]] <- data[[i]] %>%
-      dplyr::filter(K %in% ks) %>%
-      dplyr::filter(Graph %in% graphs) %>%
-      dplyr::arrange(Graph, K)
-    n_after <- nrow(data[[i]])
-
-    n_diff <- n_before - n_after
-    if (n_diff > 0) {
-      cat(paste0("Removed ", n_diff, " rows from ", data[[i]]$Algorithm[1], "\n"))
-    }
+  # Disable plot generation for statistics that are not contained in the data
+  if (contains_invalid_column(df, "AvgCut")) {
+    generate_all_cut <- FALSE
+    generate_pairwise_cut <- FALSE
   }
 
-  for (i in seq_along(data)) {
-    cat(paste0(data[[i]]$Algorithm[1], ": ", nrow(data[[i]]), " rows\n"))
+  if (contains_invalid_column(df, "AvgTime")) {
+    generate_all_time <- FALSE
   }
 
-  exp_nrows <- nrow(data[[1]])
-  for (row in 1:exp_nrows) {
-    first_graph <- data[[1]][row, "Graph"]
-    first_k <- data[[1]][row, "K"]
+  if (contains_invalid_column(
+    df,
+    "AvgClusteringTime",
+    "AvgContractionTime",
+    "AvgInitialPartitioningTime",
+    "AvgRefinementTime"
+  )) {
+    generate_detailed_time <- FALSE
+  }
 
-    for (i in seq_along(data)) {
-      cur_graph <- data[[i]][row, "Graph"]
-      cur_k <- data[[i]][row, "K"]
+  if (contains_invalid_column(df, "AvgMemory")) {
+    generate_all_memory <- FALSE
+  }
 
-      if (first_graph != cur_graph || first_k != cur_k) {
-        cat(paste0("Mismatch in row ", row, " for ", algorithms[i], "\n"))
-        cat(paste0("Expected graph=", first_graph, ", k=", first_k, "\n"))
-        cat(paste0("Got graph=", cur_graph, ", k=", cur_k, "\n"))
-        quit()
-      }
-    }
+  if (contains_invalid_column(
+    df,
+    "AvgInputGraphMemory",
+    "AvgFirstCoarseGraphMemory",
+    "AvgRemainingMemory"
+  )) {
+    generate_detailed_memory <- FALSE
+  }
+
+  if (contains_invalid_column(df, "CompressionRatio")) {
+    generate_compression_ratio <- FALSE
   }
 }
 
-# Performance profile containing all algorithms
+data <- filter_data(data)
+validate_data(data)
+
 if (generate_all_cut) {
-  all_pp <- do.call(create_performance_profile, data) +
-    theme_bw() +
-    create_theme() +
-    ggtitle(paste0(
-      num_unique_graphs,
-      " unique graphs with k={",
-      paste(ks, collapse = ", "),
-      "}"
-    ))
-  ggsave("all_cut.pdf", all_pp, "pdf", "plots")
+  create_cut_plots(data, generate_pairwise_cut)
 }
 
-# Pairwise performance profiles
-if (generate_pairwise_cut) {
-  pdf("plots/pairwise_cut.pdf")
-
-  for (i in 1:(length(algorithms) - 1)) {
-    for (j in (i + 1):length(algorithms)) {
-      pp <- create_performance_profile(data[[i]], data[[j]]) +
-        theme_bw() +
-        create_theme() +
-        ggtitle(paste0(
-          num_unique_graphs,
-          " unique graphs with k={",
-          paste(ks, collapse = ", "),
-          "}"
-        ))
-      print(pp)
-    }
-  }
-
-  dev.off()
-}
-
-print_boxplot <- function(file_name, statistic, column, annotation) {
-  args <- data
-  args[["statistic"]] <- statistic
-  args[["column_statistic"]] <- column
-  args[["annotation"]] <- annotation
-
-  all_bp <- do.call(create_boxplot, args) +
-    ggplot2::theme_bw() +
-    create_theme()
-  ggplot2::ggsave(paste(file_name, "pdf", sep = "."), all_bp, "pdf", "plots")
-}
-
-print_per_k_boxplot <- function(file_name, statistic, column) {
-  pdf(paste0("plots/", file_name, ".pdf"))
-
-  for (k in ks) {
-    fargs <- lapply(data, function(df) {
-      df %>% dplyr::filter(K == k)
-    })
-    fargs[["statistic"]] <- statistic
-    fargs[["column_statistic"]] <- column
-
-    all_bp <- do.call(create_boxplot, fargs) +
-      ggplot2::theme_bw() +
-      create_theme() +
-      ggplot2::ggtitle(paste0("k=", k))
-    print(all_bp)
-  }
-  dev.off()
-}
-
-# Running time boxplots
 if (generate_all_time) {
-  print_boxplot("all_time", "Time", "AvgTime", gmean_running_times)
+  create_timing_plots(data, generate_per_k, generate_detailed_time)
 }
 
-if (generate_clustering_time) {
-  print_boxplot("all_clustering_time", "Time", "AvgClusteringTime", gmean_clustering_times)
-}
-
-if (generate_contraction_time) {
-  print_boxplot("all_contraction_time", "Time", "AvgContractionTime", gmean_contraction_times)
-}
-
-if (generate_initial_partitioning_time) {
-  print_boxplot("all_initial_partitioning_time", "Time", "AvgInitialPartitioningTime", gmean_initial_partitioning_times)
-}
-
-if (generate_refinement_time) {
-  print_boxplot("all_refinement_time", "Time", "AvgRefinementTime", gmean_refinement_times)
-}
-
-if (generate_per_k_time) {
-  print_per_k_boxplot("per_k_time", "Time", "AvgTime")
-}
-
-if (generate_per_k_clustering_time) {
-  print_per_k_boxplot("per_k_clustering_time", "Time", "AvgClusteringTime")
-}
-
-if (generate_per_k_contraction_time) {
-  print_per_k_boxplot("per_k_contraction_time", "Time", "AvgContractionTime")
-}
-
-if (generate_per_k_initial_partitioning_time) {
-  print_per_k_boxplot("per_k_initial_partitioning_time", "Time", "AvgInitialPartitioningTime")
-}
-
-if (generate_per_k_refinement_time) {
-  print_per_k_boxplot("per_k_refinement_time", "Time", "AvgRefinementTime")
-}
-
-# Memory usage boxplots
 if (generate_all_memory) {
-  print_boxplot("memory_usage", "Memory", "AvgMemory", gmean_memory_usage)
+  create_memory_plots(data, generate_per_k, generate_detailed_memory)
 }
-
-if (generate_per_k_memory) {
-  print_per_k_boxplot("per_k_memory_usage", "Memory", "AvgMemory")
-}
-
-# Running time per instance plots
-all_data <- data.frame()
-first <- data[[1]]
-first_memory <- do.call(rbind.data.frame, data) %>%
-  dplyr::filter(AvgMemory > 0) %>%
-  dplyr::group_by(Algorithm) %>%
-  dplyr::filter(cur_group_id() == 1)
-for (df in data) {
-  df$RelAvgCut <- df$AvgCut / first$AvgCut
-  df$RelAvgTime <- df$AvgTime / first$AvgTime
-  df$RelAvgClusteringTime <- df$AvgClusteringTime / first$AvgClusteringTime
-  df$RelAvgContractionTime <- df$AvgContractionTime / first$AvgContractionTime
-  df$RelAvgInitialPartitioningTime <- df$AvgInitialPartitioningTime / first$AvgInitialPartitioningTime
-  df$RelAvgRefinementTime <- df$AvgRefinementTime / first$AvgRefinementTime
-  df$RelAvgMemory <- df$AvgMemory / first_memory$AvgMemory
-  all_data <- rbind(all_data, df)
-}
-all_data$K <- factor(all_data$K)
-graphs <- unique(all_data$Graph)
 
 if (generate_per_instance) {
-  side_len <- round(sqrt(length(unique(all_data$Graph))))
-  normalized_data <- all_data |>
-    dplyr::mutate(Title = paste0(Graph, ", D=", MaxDeg)) |>
-    dplyr::mutate(MaxDegToM = MaxDeg / M.y)
-  normalized_data$Title <- factor(normalized_data$Title, levels = unique(normalized_data$Title[order(normalized_data$MaxDeg, decreasing = TRUE)]))
-
-  plot_per_instance <- function(title,
-                                objective,
-                                column,
-                                per_instance_data = normalized_data) {
-    p <- ggplot2::ggplot(
-      per_instance_data,
-      aes(x = K, y = !!sym(column), fill = Algorithm)
-    ) +
-      ggtitle(paste0(
-        "Per Instance",
-        title,
-        " (rel. to first, lower is better)"
-      )) +
-      geom_bar(
-        stat = "identity",
-        position = position_dodge()
-      ) +
-      ylab(paste0(objective, " rel. to Best")) +
-      xlab("Number of Blocks") +
-      theme_bw() +
-      facet_wrap(~Title, ncol = side_len, scales = "free") +
-      geom_hline(yintercept = 1) +
-      create_theme_facet() +
-      theme(legend.position = "right")
-    print(p)
-  }
-
-  pdf("plots/per_instance.pdf", width = side_len * 4, height = side_len * 3)
-
-  # Cuts
-  if (generate_all_cut) {
-    plot_per_instance("Cuts", "Cut", "RelAvgCut")
-  }
-
-  # Running time
-  if (generate_all_time) {
-    plot_per_instance("Running Times", "Time", "RelAvgTime")
-  }
-
-  # Clustering time
-  if (generate_clustering_time) {
-    plot_per_instance("Clustering Times", "Time", "RelAvgClusteringTime")
-  }
-
-  # Contraction time
-  if (generate_contraction_time) {
-    plot_per_instance("Contraction Times", "Time", "RelAvgContractionTime")
-  }
-
-  # Initial Partitioning time
-  if (generate_initial_partitioning_time) {
-    plot_per_instance("Initial Partitioning Times", "Time", "RelAvgInitialPartitioningTime")
-  }
-
-  # Refinement time
-  if (generate_refinement_time) {
-    plot_per_instance("Refinement Times", "Time", "RelAvgRefinementTime")
-  }
-
-  # Memory Usage
-  if (generate_all_memory) {
-    normalized_memory_data <- normalized_data %>% dplyr::filter(AvgMemory > 0)
-    plot_per_instance("Memory Usage", "Used Memory", "RelAvgMemory", normalized_memory_data)
-  }
-
-  dev.off()
+  create_per_instance_plot(
+    data,
+    generate_all_cut,
+    generate_all_time,
+    generate_detailed_time,
+    generate_all_memory
+  )
 }
 
-if (generate_per_instance_fm_batches) {
-  side_len <- round(sqrt(length(unique(all_data$Graph))))
-  pdf("plots/per_instance_fm_batches.pdf", width = side_len * 4, height = side_len * 3)
-
-  df$Distance <- factor(df$Distance)
-  for (phase in c("All", "Coarsest", "Finest")) {
-    df <- all_data |>
-      dplyr::filter(Phase == phase) |>
-      dplyr::group_by(Graph, Algorithm, K) |>
-      dplyr::arrange(Distance) |>
-      dplyr::mutate(TotalGain = cumsum(BatchesGain) / sum(BatchesGain)) |>
-      dplyr::mutate(TotalSize = cumsum(BatchesSize) / sum(BatchesSize)) |>
-      dplyr::ungroup() |>
-      dplyr::mutate(Title = paste0(Graph, ", D=", MaxDeg))
-    df$Title <- factor(df$Title, levels = unique(df$Title[order(df$MaxDeg, decreasing = TRUE)]))
-
-    p <- if (length(unique(df$Algorithm)) == 1) {
-      ggplot(df, aes(x = Distance, y = TotalGain, linetype = K))
-    } else {
-      ggplot(df, aes(x = Distance, y = TotalGain, linetype = K, color = Algorithm))
-    }
-
-    p <- p +
-      ggtitle(paste0("Total Gain over Distance (", phase, ")")) +
-      geom_step() +
-      ylab("Total Gain") +
-      xlab("Distance") +
-      theme_bw() +
-      facet_wrap(~Title, ncol = side_len, scales = "free") +
-      create_theme_facet() +
-      theme(legend.position = "bottom")
-    print(p)
-  }
-  dev.off()
-}
-
-if (generate_fm_batches) {
-  pdf("plots/fm_batches.pdf", width = 7)
-
-  cutoff_distance <- 16
-  num_graphs <- length(unique(all_data$Graph))
-
-  for (phase in c("All", "Coarsest", "Finest")) {
-    df <- all_data |>
-      dplyr::filter(Phase == phase) |>
-      dplyr::group_by(Graph, Algorithm, K) |>
-      dplyr::arrange(Distance) |>
-      dplyr::mutate(TotalGain = cumsum(BatchesGain) / sum(BatchesGain)) |>
-      dplyr::mutate(TotalSize = cumsum(BatchesSize) / sum(BatchesSize)) |>
-      dplyr::ungroup() |>
-      dplyr::mutate(Distance = Distance + 1) |>
-      dplyr::group_by(Algorithm, K, Distance) |>
-      dplyr::summarise(
-        TotalGainSum = (sum(TotalGain) + num_graphs - n()) / num_graphs,
-        TotalSizeSum = (sum(TotalSize) + num_graphs - n()) / num_graphs,
-        .groups = "drop"
-      ) |>
-      dplyr::filter(Distance < cutoff_distance)
-
-    p <- if (length(unique(df$Algorithm)) == 1) {
-      ggplot(df, aes(x = Distance, y = TotalGainSum, linetype = K))
-    } else {
-      ggplot(df, aes(x = Distance, y = TotalGainSum, linetype = K, color = Algorithm))
-    }
-
-    p <- p +
-      ggtitle(paste0("Total Gain over Distance (", phase, "); Distance < ", cutoff_distance)) +
-      geom_step() +
-      ylab("Total Gain") +
-      xlab("Distance") +
-      theme_bw() +
-      create_theme() +
-      scale_x_continuous(breaks = 0:cutoff_distance) +
-      theme(legend.position = "bottom")
-    print(p)
-  }
-  dev.off()
-}
-
-if (generate_ss) {
-  pdf("plots/ss.pdf", width = 14, height = 3)
-  p <- ggplot(all_data, aes(x = NumPEs, y = AvgTime)) +
-    ggtitle("Strong scaling") +
-    geom_line() +
-    ylab("Running time") +
-    xlab("Number of PEs") +
-    theme_bw() +
-    scale_x_continuous(trans = "log2", breaks = unique(all_data$NumPEs)) +
-    facet_wrap(~Graph, ncol = 4, scales = "free") +
-    create_theme_facet() +
-    theme(legend.position = "right")
-  print(p)
-  dev.off()
+if (generate_compression_ratio) {
+  create_compression_ratio_plots(data)
 }

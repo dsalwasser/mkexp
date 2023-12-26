@@ -18,6 +18,9 @@ BEGIN {
     data["InitialPartitioningTime"] = 0
     data["RefinementTime"] = 0
     data["Memory"] = -1
+    data["InputGraphMemory"] = 0
+    data["FirstCoarseGraphMemory"] = 0
+    data["RemainingMemory"] = -1
     data["CompressionRatio"] = -1
     data["SizeReduction"] = -1
     data["Epsilon"] = 0.03
@@ -38,6 +41,8 @@ BEGIN {
     }
 
     coarsening = 0
+    memory = 0
+    coarsened = 0
 }
 
 /__END_FILE__/ {
@@ -76,6 +81,35 @@ match($0, /Refinement: \.* ([0-9\.e\-]+) s/, m) {
 
 match($0, /Global Heap Profiler: \.* ([0-9\.]+)/, m) {
     data["Memory"] = m[1]
+    memory = 1
+}
+
+match($0, /Input Graph Allocation: \.* ([0-9\.]+)/, m) {
+    if (memory) {
+        data["InputGraphMemory"] = m[1]
+    }
+}
+
+match($0, /Partitioning: \.* ([0-9\.]+)/, m) {
+    if (memory) {
+        data["RemainingMemory"] = m[1]
+    }
+}
+
+match($0, /Coarse graph nodes allocation: \.* ([0-9\.]+)/, m) {
+    if (memory && !coarsened) {
+        data["FirstCoarseGraphMemory"] += m[1]
+        data["RemainingMemory"] -= m[1]
+    }
+}
+
+match($0, /Coarse graph edges allocation: \.* ([0-9\.]+)/, m) {
+    if (memory && !coarsened) {
+        data["FirstCoarseGraphMemory"] += m[1]
+        data["RemainingMemory"] -= m[1]
+
+        coarsened = 1
+    }
 }
 
 match($0, /Compresion Ratio: * ([0-9\.]+)/, m) {
@@ -111,6 +145,9 @@ function header() {
     printf "InitialPartitioningTime,"
     printf "RefinementTime,"
     printf "Memory,"
+    printf "InputGraphMemory,"
+    printf "FirstCoarseGraphMemory,"
+    printf "RemainingMemory,"
     printf "CompressionRatio,"
     printf "SizeReduction,"
     printf "NumNodes,"
@@ -134,6 +171,9 @@ function yield() {
     printf "%f,", data["InitialPartitioningTime"]
     printf "%f,", data["RefinementTime"]
     printf "%f,", data["Memory"]
+    printf "%f,", data["InputGraphMemory"]
+    printf "%f,", data["FirstCoarseGraphMemory"]
+    printf "%f,", data["RemainingMemory"]
     printf "%f,", data["CompressionRatio"]
     printf "%f,", data["SizeReduction"]
     printf "%d,", data["NumNodes"]
