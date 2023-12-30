@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# This is a template for a graph compression varint codec experiment configuration file.
+
+# Define four algorithms. One algorithm uses the slow varint decoder, one the fast decoder, one
+# uses run-length encoding and the last uses stream encoding.
+#
+DefineAlgorithmBuild pKaMinParLP64 pKaMinPar-LP-Benchmark -DKAMINPAR_COMPRESSION_HIGH_DEGREE_ENCODING=Off -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=Off
+DefineAlgorithmBuild pKaMinParLP64-VarInt-Fast pKaMinPar-LP-Benchmark -DKAMINPAR_COMPRESSION_HIGH_DEGREE_ENCODING=Off -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=Off -DKAMINPAR_COMPRESSION_FAST_DECODING=On
+DefineAlgorithmBuild pKaMinParLP64-VarInt-Run-Length pKaMinPar-LP-Benchmark -DKAMINPAR_COMPRESSION_HIGH_DEGREE_ENCODING=Off -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=Off -DKAMINPAR_COMPRESSION_FAST_DECODING=On -DKAMINPAR_COMPRESSION_RUN_LENGTH_ENCODING=On
+DefineAlgorithmBuild pKaMinParLP64-VarInt-Stream pKaMinPar-LP-Benchmark -DKAMINPAR_COMPRESSION_HIGH_DEGREE_ENCODING=Off -DKAMINPAR_COMPRESSION_INTERVAL_ENCODING=Off -DKAMINPAR_COMPRESSION_FAST_DECODING=On -DKAMINPAR_COMPRESSION_STREAM_ENCODING=On
+
+# Defines five algorithms:
+# - KaMinPar label propagation micro-benchmark without graph compression
+# - KaMinPar label propagation micro-benchmark with graph compression using the slow decoder
+# - KaMinPar label propagation micro-benchmark with graph compression using the fast decoder
+# - KaMinPar label propagation micro-benchmark with graph compression using run-length encoding
+# - KaMinPar label propagation micro-benchmark with graph compression using stream encoding
+#
+DefineAlgorithm KaMinPar-LP-Uncompressed pKaMinParLP64
+DefineAlgorithm KaMinPar-LP-Compressed pKaMinParLP64 --compress
+DefineAlgorithm KaMinPar-LP-Compressed-VarInt-Fast pKaMinParLP64-VarInt-Fast --compress
+DefineAlgorithm KaMinPar-LP-Compressed-VarInt-Run-Length pKaMinParLP64-VarInt-Run-Length --compress
+DefineAlgorithm KaMinPar-LP-Compressed-VarInt-Stream pKaMinParLP64-VarInt-Stream --compress
+
+# Pick a system for which the jobfiles should be generated:
+#
+System Generic
+# System Generic                # any Linux system
+# System i10                    # i10 compute servers, run experiment via "exclusive"
+# System i10-Nonexclusive       # i10 compute servers, run without "exclusive"
+# System i10-Parallel           # i10 + GNU Parallel (only use for sequential runs and if you don't need precise running times)
+# System HoreKa-TBB             # HoreKa with MPI only / MPI+TBB
+# System HoreKa-OMP             # HoreKa with MPI only / MPI+OpenMP
+# System SuperMUC               # SuperMUC with MPI only / MPI+TBB
+# System SuperMUC-SlotScheduler # SuperMUC for shared-memory or sequential jobs, that are executed in parallel on multiple jobs by a job scheduler
+
+# If you want to run this experiment on SuperMUC, provide additional parameters:
+#
+# Username <username>   # your SSH username for SuperMUC file transfer
+# Project <project>     # your SuperMUC project
+# Partition <partition> # *OPTIONAL*, if not set, job partition will be either micro, general or large, depending on the number of nodes
+
+# Pick a "call wrapper" that should be used to invoke the partitioners.
+#
+MPI none
+# MPI none    # do not run with mpirun etc.
+# MPI OpenMPI # run with mpirun
+# MPI IMPI    # run with Intel MPI (SuperMUC only)
+# MPI taskset # do not run with mpirun etc., but use taskset to limit CPU affinity
+
+ExperimentGraphCompressionEncoding() {
+    Algorithms KaMinPar-LP-Uncompressed KaMinPar-LP-Compressed KaMinPar-LP-Compressed-VarInt-Fast KaMinPar-LP-Compressed-VarInt-Run-Length KaMinPar-LP-Compressed-VarInt-Stream
+
+    Ks 4 # Partition into 4 blocks
+    Seeds 1 2 3 # Perform repetitions with seeds 1, 2 and 3
+    Threads 1x1x4 1x1x64 # Run with 4 and 64 threads
+    #       | | +-- number of threads
+    #       | +-- number of MPI processes
+    #       +-- number of compute nodes
+
+    # Timelimit 1:00:00 # Abort experiment after one hour (optional)
+    # TimelimitPerInstance 30:00 # Abort one run after 30 minutes (optional)
+
+    Graphs /path/to/benchmark/set/ # Partition all graphs contained in some directory
+}

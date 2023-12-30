@@ -80,6 +80,10 @@ while [[ $# -gt 0 ]]; do
             mode="init-kaminpar-graph-compression-encoding"
             shift
             ;;
+        --init-kaminpar-graph-compression-varint-codec)
+            mode="init-kaminpar-graph-compression-varint-codec"
+            shift
+            ;;
         --progress)
             mode="progress"
             shift 

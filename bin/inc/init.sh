@@ -18,3 +18,7 @@ if [[ $mode == "init-kaminpar-graph-compression-encoding" ]]; then
     cp "$ROOT/examples/KaMinPar-Graph-Compression-Encoding" "$PWD/Experiment"
     exit 0
 fi
+if [[ $mode == "init-kaminpar-graph-compression-varint-codec" ]]; then 
+    cp "$ROOT/examples/KaMinPar-Graph-Compression-VarInt-Codec" "$PWD/Experiment"
+    exit 0
+fi
