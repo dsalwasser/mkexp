@@ -39,6 +39,23 @@ GenerateJobfileEntry() {
             fi
             echo "taskset -c 0-$(( ${args[num_threads]} - 1 )) ${args[exe]}"
             ;;
+        taskset-ht)
+            echo -n "taskset -c "
+            first_cpu=true
+            core_cpu_pairs=$(lscpu -p=core,cpu | sed '/^#/d')
+            for i in $core_cpu_pairs; do
+                core_cpu_pair=($(echo "$i" | tr ',' '\n'))
+                if [ ${core_cpu_pair[0]} -lt ${args[num_threads]} ]; then
+                    if [ $first_cpu = false ]; then
+                        echo -n ','
+                    fi
+
+                    echo -n ${core_cpu_pair[1]}
+                    first_cpu=false
+                fi
+            done
+            echo " ${args[exe]}"
+            ;;
         none)
             if [[ "${args[print_wrapper]}" == "1" ]]; then
                 >&2 echo "  - <call>"

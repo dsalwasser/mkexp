@@ -158,7 +158,7 @@ Partition() {
 # Specify the MPI library that should be used, e.g., OpenMPI, IMPI or 
 # other runners, e.g., none or taskset.
 #
-# MPI <OpenMPI|IMPI|none|taskset>
+# MPI <OpenMPI|IMPI|none|taskset|taskset-ht>
 MPI() {
     _mpi="$1"
 }
