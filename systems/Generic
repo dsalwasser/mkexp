@@ -42,10 +42,11 @@ GenerateJobfileEntry() {
         taskset-ht)
             echo -n "taskset -c "
             first_cpu=true
+            num_cores=$((args[num_threads] / 2))
             core_cpu_pairs=$(lscpu -p=core,cpu | sed '/^#/d')
             for i in $core_cpu_pairs; do
                 core_cpu_pair=($(echo "$i" | tr ',' '\n'))
-                if [ ${core_cpu_pair[0]} -lt ${args[num_threads]} ]; then
+                if [ ${core_cpu_pair[0]} -lt $num_cores ]; then
                     if [ $first_cpu = false ]; then
                         echo -n ','
                     fi
