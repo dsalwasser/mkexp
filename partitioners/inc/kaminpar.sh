@@ -82,7 +82,10 @@ InvokeFromDisk() {
         >&2 echo -e "      --seed=$ARGS_COLOR${invoke_from_disk_args[seed]}$NO_COLOR"
         >&2 echo -e "      -t $ARGS_COLOR${invoke_from_disk_args[num_threads]}$NO_COLOR"
         if [[ ! -v KAMINPAR_BENCHMARK_TARGET ]]; then
-            >&2 echo "      -T"
+            >&2 echo -e "      -T"
+        fi
+        if [[ -v KAMINPAR_PRIVATE_REPOSITORY_URL ]]; then
+            >&2 echo -e "      -H"
         fi
         >&2 echo -e "  - Specified arguments: $ARGS_COLOR${invoke_from_disk_args[algorithm_arguments]}$NO_COLOR"
         >&2 echo "[...]"
@@ -98,6 +101,9 @@ InvokeFromDisk() {
         echo -n "-t ${invoke_from_disk_args[num_threads]} "
         if [[ ! -v KAMINPAR_BENCHMARK_TARGET ]]; then
             echo -n "-T "
+        fi
+        if [[ -v KAMINPAR_PRIVATE_REPOSITORY_URL ]]; then
+            echo -n "-H "
         fi
         echo -n "${invoke_from_disk_args[algorithm_arguments]}"
         echo ""
