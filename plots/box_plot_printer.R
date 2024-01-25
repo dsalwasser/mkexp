@@ -12,7 +12,7 @@ create_annotation <- function(data, statistic, column) {
     annotation <- annotation |> rbind(
       data[[i]] %>%
         dplyr::group_by(Algorithm) %>%
-        dplyr::summarise(!!rlang::sym(statistic) := mean(!!rlang::sym(column)))
+        dplyr::summarise(!!rlang::sym(statistic) := exp(mean(log(!!rlang::sym(column)))))
     )
   }
 
@@ -46,7 +46,7 @@ create_per_k_annotation <- function(data, statistic, column) {
       data[[i]] %>%
         dplyr::group_by(Algorithm, K) %>%
         dplyr::summarise(
-          !!rlang::sym(statistic) := mean(!!rlang::sym(column)),
+          !!rlang::sym(statistic) := exp(mean(log(!!rlang::sym(column)))),
           .groups = "drop"
         )
     )
@@ -96,7 +96,7 @@ create_marg_annotation <- function(data, statistic, column) {
       data[[i]] %>%
         dplyr::group_by(Algorithm, Fill) %>%
         dplyr::summarise(
-          !!rlang::sym(statistic) := mean(!!rlang::sym(column)),
+          !!rlang::sym(statistic) := exp(mean(log(!!rlang::sym(column)))),
           .groups = "drop"
         )
     )
