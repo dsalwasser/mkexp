@@ -93,6 +93,7 @@ InvokeFromDisk() {
     fi
 
     if [[ -f "$graph" ]]; then
+        echo -n "/usr/bin/time -v "
         echo -n "${invoke_from_disk_args[bin]} "
         echo -n "-G $graph "
         echo -n "-k ${invoke_from_disk_args[k]} "
@@ -101,7 +102,7 @@ InvokeFromDisk() {
         echo -n "-t ${invoke_from_disk_args[num_threads]} "
         if [[ ! -v KAMINPAR_BENCHMARK_TARGET ]]; then
             echo -n "-T "
-            if [[ -v KAMINPAR_PRIVATE_REPOSITORY_URL ]]; then
+            if [ -v KAMINPAR_PRIVATE_REPOSITORY_URL ] && [ "${invoke_from_disk_args[algorithm_version]}" == "latest" ]; then
                 echo -n "-H "
             fi
         fi

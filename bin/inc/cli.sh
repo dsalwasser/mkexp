@@ -68,6 +68,10 @@ while [[ $# -gt 0 ]]; do
             mode="init-mtkahypar-supermuc"
             shift
             ;;
+        --init-kaminpar-memory-optimizations)
+            mode="init-kaminpar-memory-optimizations"
+            shift
+            ;;
         --init-kaminpar-label-propagation)
             mode="init-kaminpar-label-propagation"
             shift
