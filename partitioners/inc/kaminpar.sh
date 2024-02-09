@@ -102,7 +102,7 @@ InvokeFromDisk() {
         echo -n "-t ${invoke_from_disk_args[num_threads]} "
         if [[ ! -v KAMINPAR_BENCHMARK_TARGET ]]; then
             echo -n "-T "
-            if [ -v KAMINPAR_PRIVATE_REPOSITORY_URL ] && [ "${invoke_from_disk_args[algorithm_version]}" == "latest" ]; then
+            if [ -v KAMINPAR_PRIVATE_REPOSITORY_URL ] && [ "${invoke_from_disk_args[algorithm_version]}" == "latest" ] && [[ "${invoke_from_disk_args[algorithm_build_options]}" != *"-DKAMINPAR_ENABLE_HEAP_PROFILING=Off"* ]]; then
                 echo -n "-H "
             fi
         fi
